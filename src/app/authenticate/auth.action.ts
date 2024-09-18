@@ -7,6 +7,9 @@ import { Argon2id } from "oslo/password";
 import { lucia } from "@/lib/lucia";
 import { cookies } from "next/headers";
 import { signInSchema } from "./SignInForm";
+import { redirect } from "next/navigation";
+import { generateCodeVerifier, generateState } from "arctic";
+import { googleOAuthClient } from "@/lib/googleOauth";
 // server action
 
 export const signUp = async (values: z.infer<typeof signUpSchema>) => {
@@ -72,4 +75,42 @@ export const signIn = async (values: z.infer<typeof signInSchema>) => {
     sessionCookie.attributes
   );
   return { success: true };
+};
+
+export const logOut = async () => {
+  // setting blank session cookie
+  const sessionCookie = await lucia.createBlankSessionCookie();
+  cookies().set(
+    sessionCookie.name,
+    sessionCookie.value,
+    sessionCookie.attributes
+  );
+  return redirect("/authenticate");
+};
+
+export const getGoogleOauthConsentUrl = async () => {
+  try {
+    const state = generateState();
+    const codeVerifier = generateCodeVerifier();
+    cookies().set("codeVerifier", codeVerifier, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    cookies().set("state", state, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    const authUrl = await googleOAuthClient.createAuthorizationURL(
+      state,
+      codeVerifier,
+      {
+        scopes: ["profile", "email"],
+      }
+    );
+    return { success: true, url: authUrl.toString() };
+  } catch (error) {
+    return { success: false };
+  }
 };

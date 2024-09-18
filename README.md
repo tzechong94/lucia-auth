@@ -38,4 +38,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 notes:
 
 - passing node as props
-- 
+- oauth2.0 -> 
